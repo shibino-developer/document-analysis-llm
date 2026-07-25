@@ -1,3 +1,9 @@
+"""
+app.py
+
+Document Analysis using LLMs
+"""
+
 import streamlit as st
 
 from components.sidebar import render_sidebar
@@ -16,7 +22,10 @@ render_sidebar()
 st.title("📄 Document Analysis using LLMs")
 
 st.write(
-    "Upload a PDF, DOCX or TXT document and ask questions about its contents using Retrieval-Augmented Generation (RAG)."
+    """
+Upload a PDF, DOCX or TXT document and ask questions about it using
+Retrieval-Augmented Generation (RAG).
+"""
 )
 
 upload_document()

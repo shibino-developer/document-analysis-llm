@@ -13,31 +13,27 @@ from utils.vectorstore import VectorStoreService
 
 
 def initialize_session():
-    """
-    Initialize Streamlit session variables.
-    """
 
     defaults = {
-        "vector_store": None,
-        "chunks": [],
-        "documents": [],
         "processed": False,
         "filename": "",
+        "documents": [],
+        "chunks": [],
+        "vector_store": None,
+        "messages": [],
     }
 
     for key, value in defaults.items():
+
         if key not in st.session_state:
             st.session_state[key] = value
 
 
 def upload_document():
-    """
-    Upload and process a document.
-    """
 
     initialize_session()
 
-    st.header("📄 Upload Document")
+    st.header("📂 Upload Document")
 
     uploaded_file = st.file_uploader(
         "Choose a PDF, DOCX or TXT file",
@@ -47,11 +43,11 @@ def upload_document():
     if uploaded_file is None:
         return
 
+    # Reprocess only if a different file is uploaded
     if (
         st.session_state.processed
         and uploaded_file.name == st.session_state.filename
     ):
-        st.success("Document already processed.")
         return
 
     with st.spinner("Processing document..."):
@@ -68,22 +64,13 @@ def upload_document():
         vector_store = VectorStoreService()
         vector_store.create_vector_store(chunks)
 
-        st.session_state.documents = documents
-        st.session_state.chunks = chunks
-        st.session_state.vector_store = vector_store
-        st.session_state.filename = uploaded_file.name
-        st.session_state.processed = True
+    st.session_state.documents = documents
+    st.session_state.chunks = chunks
+    st.session_state.vector_store = vector_store
+    st.session_state.filename = uploaded_file.name
+    st.session_state.processed = True
 
-    st.success("Document processed successfully!")
+    # Clear previous chat when a new document is uploaded
+    st.session_state.messages = []
 
-    st.info(
-        f"""
-Loaded **{uploaded_file.name}**
-
-Pages/Documents: **{len(documents)}**
-
-Chunks Created: **{len(chunks)}**
-
-Vectors Stored: **{vector_store.vector_count()}**
-"""
-    )
+    st.success("✅ Document processed successfully.")
