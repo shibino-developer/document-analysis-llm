@@ -1,3 +1,11 @@
 streamlit
+langchain
+langchain-core
+langchain-text-splitters
 pypdf
 python-docx
+langchain-huggingface
+faiss-cpu
+sentence-transformers
+
+
