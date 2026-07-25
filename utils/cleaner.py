@@ -1,6 +1,5 @@
-from typing import List
 import re
-
+from typing import List
 from langchain_core.documents import Document
 
 
@@ -15,27 +14,27 @@ class TextCleaner:
 
             text = document.page_content
 
+            # Normalize line endings
+            text = text.replace("\r\n", "\n")
+            text = text.replace("\r", "\n")
+
+            # Replace tabs with spaces
             text = text.replace("\t", " ")
-            text = text.replace("\r", " ")
 
-            text = re.sub(r"[ ]{2,}", " ", text)
-            text = re.sub(r"\n{3,}", "\n\n", text)
+            # Join single newlines into spaces
+            text = re.sub(r'(?<!\n)\n(?!\n)', ' ', text)
 
-            text = "".join(
-                ch for ch in text
-                if ch.isprintable() or ch == "\n"
-            )
+            # Keep paragraph breaks
+            text = re.sub(r'\n\s*\n', '\n\n', text)
+
+            # Remove extra spaces
+            text = re.sub(r' +', ' ', text)
 
             cleaned_documents.append(
-
                 Document(
-
                     page_content=text.strip(),
-
                     metadata=document.metadata
-
                 )
-
             )
 
         return cleaned_documents
