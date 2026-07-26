@@ -1,140 +1,110 @@
 """
 prompt.py
 
-Prompt Builder for Retrieval-Augmented Generation (RAG).
-
-Responsibilities
-----------------
-- Build prompts for Gemini.
-- Inject retrieved document context.
-- Ensure answers are based only on the provided context.
+Builds prompts for Retrieval-Augmented Generation (RAG).
 """
+
+from typing import List
+
+from langchain_core.documents import Document
 
 
 class PromptBuilder:
     """
-    Builds prompts for Gemini using retrieved document chunks.
+    Builds prompts for Gemini.
     """
 
-    @staticmethod
     def build_prompt(
-        context: str,
-        question: str
+        self,
+        documents: List[Document],
+        question: str,
+        chat_history: list | None = None,
     ) -> str:
         """
-        Create a prompt for the LLM.
+        Build the RAG prompt.
 
         Parameters
         ----------
-        context : str
-            Retrieved document context.
+        documents : List[Document]
+            Retrieved chunks.
 
         question : str
             User question.
 
-        Returns
-        -------
-        str
-            Complete prompt.
+        chat_history : list
+            Previous conversation.
         """
 
-        prompt = f"""
-You are an intelligent Document Analysis Assistant.
+        # ---------------------------------------------
+        # Previous Conversation
+        # ---------------------------------------------
 
-Your job is to answer ONLY from the provided document context.
+        history = ""
 
-=========================
-DOCUMENT CONTEXT
-=========================
+        if chat_history:
 
-{context}
+            history += "PREVIOUS CONVERSATION\n"
+            history += "=" * 40 + "\n\n"
 
-=========================
-USER QUESTION
-=========================
+            for message in chat_history:
 
-{question}
+                role = message["role"].capitalize()
 
-=========================
-INSTRUCTIONS
-=========================
+                history += f"{role}: {message['content']}\n\n"
 
-1. Answer ONLY using the document context.
-
-2. Do NOT use outside knowledge.
-
-3. If the answer cannot be found in the document, reply exactly:
-
-"I could not find the answer in the uploaded document."
-
-4. Be accurate.
-
-5. Be concise.
-
-6. Use bullet points whenever appropriate.
-
-7. If the question asks for steps, provide numbered steps.
-
-8. Quote important terms exactly as they appear in the document.
-
-=========================
-ANSWER
-=========================
-"""
-
-        return prompt
-
-    # ----------------------------------------------------------
-
-    @staticmethod
-    def combine_documents(documents) -> str:
-        """
-        Combine retrieved LangChain Documents into a single context string.
-
-        Parameters
-        ----------
-        documents : list[Document]
-
-        Returns
-        -------
-        str
-        """
+        # ---------------------------------------------
+        # Document Context
+        # ---------------------------------------------
 
         context = ""
 
         for i, doc in enumerate(documents, start=1):
 
-            context += f"\n\nDocument Chunk {i}\n"
-            context += "-" * 40
-            context += "\n"
-            context += doc.page_content
+            context += (
+                f"\nDocument Chunk {i}\n"
+                + "-" * 40
+                + "\n"
+            )
 
-        return context
+            context += doc.page_content + "\n"
 
-    # ----------------------------------------------------------
+        # ---------------------------------------------
+        # Final Prompt
+        # ---------------------------------------------
 
-    @staticmethod
-    def build_from_documents(
-        documents,
-        question: str
-    ) -> str:
-        """
-        Build a prompt directly from LangChain Documents.
+        prompt = f"""
+You are an intelligent Document Analysis Assistant.
 
-        Parameters
-        ----------
-        documents : list[Document]
+Answer ONLY using the uploaded document.
 
-        question : str
+{history}
 
-        Returns
-        -------
-        str
-        """
+DOCUMENT CONTEXT
+========================================
 
-        context = PromptBuilder.combine_documents(documents)
+{context}
 
-        return PromptBuilder.build_prompt(
-            context=context,
-            question=question
-        )
+CURRENT QUESTION
+========================================
+
+{question}
+
+RULES
+========================================
+
+1. Use ONLY the document context.
+2. Use previous conversation if needed.
+3. Do NOT invent information.
+4. If the answer is not present, reply:
+
+"I could not find the answer in the uploaded document."
+
+5. Give clear, concise answers.
+6. Use bullet points when appropriate.
+7. If steps are requested, provide numbered steps.
+
+ANSWER
+========================================
+"""
+
+        return prompt.strip()

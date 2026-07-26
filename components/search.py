@@ -2,6 +2,14 @@
 search.py
 
 Semantic Search + Gemini Chat Interface
+
+Responsibilities
+----------------
+- Display chat interface
+- Retrieve relevant document chunks
+- Build RAG prompt
+- Pass previous conversation to Gemini
+- Display retrieved sources
 """
 
 import streamlit as st
@@ -11,24 +19,30 @@ from utils.llm import LLMService
 
 
 def search_interface():
+    """
+    Render the document chat interface.
+    """
+
+    # ---------------------------------------------------------
+    # Check document status
+    # ---------------------------------------------------------
 
     if not st.session_state.get("processed", False):
         return
 
     st.divider()
-
     st.header("💬 Chat with your Document")
 
-    # -------------------------------
-    # Initialize Chat
-    # -------------------------------
+    # ---------------------------------------------------------
+    # Initialize Chat History
+    # ---------------------------------------------------------
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # -------------------------------
+    # ---------------------------------------------------------
     # Display Previous Messages
-    # -------------------------------
+    # ---------------------------------------------------------
 
     for message in st.session_state.messages:
 
@@ -52,20 +66,23 @@ def search_interface():
                         st.json(doc.metadata)
                         st.write(doc.page_content)
 
-    # -------------------------------
+    # ---------------------------------------------------------
     # Chat Input
-    # -------------------------------
+    # ---------------------------------------------------------
 
     query = st.chat_input(
-        "Ask a question about your document..."
+        "Ask anything about the uploaded document..."
     )
 
-    if query is None:
+    if not query:
         return
 
-    # -------------------------------
-    # Show User Message
-    # -------------------------------
+    # ---------------------------------------------------------
+    # Display User Message
+    # ---------------------------------------------------------
+
+    with st.chat_message("user"):
+        st.markdown(query)
 
     st.session_state.messages.append(
         {
@@ -74,42 +91,61 @@ def search_interface():
         }
     )
 
-    with st.chat_message("user"):
-        st.markdown(query)
+    # ---------------------------------------------------------
+    # Build Conversation Memory
+    # ---------------------------------------------------------
 
-    # -------------------------------
-    # Retrieve Documents
-    # -------------------------------
+    # Keep only the last 6 messages
+    chat_history = st.session_state.messages[-6:]
+
+    # ---------------------------------------------------------
+    # Retrieve Relevant Chunks
+    # ---------------------------------------------------------
 
     with st.spinner("Searching document..."):
 
-        docs = st.session_state.vector_store.similarity_search(
+        vector_store = st.session_state.vector_store
+
+        retrieved_docs = vector_store.similarity_search(
             query=query,
             k=3
         )
 
-        prompt = PromptBuilder().build_prompt(
-            docs,
-            query
+        # -----------------------------------------------------
+        # Build Prompt
+        # -----------------------------------------------------
+
+        prompt_builder = PromptBuilder()
+
+        prompt = prompt_builder.build_prompt(
+            documents=retrieved_docs,
+            question=query,
+            chat_history=chat_history
         )
 
-        answer = LLMService().generate_response(prompt)
+        # -----------------------------------------------------
+        # Generate Answer
+        # -----------------------------------------------------
 
-    # -------------------------------
+        llm = LLMService()
+
+        answer = llm.generate_response(prompt)
+
+    # ---------------------------------------------------------
     # Save Assistant Message
-    # -------------------------------
+    # ---------------------------------------------------------
 
     st.session_state.messages.append(
         {
             "role": "assistant",
             "content": answer,
-            "sources": docs
+            "sources": retrieved_docs
         }
     )
 
-    # -------------------------------
+    # ---------------------------------------------------------
     # Display Assistant Message
-    # -------------------------------
+    # ---------------------------------------------------------
 
     with st.chat_message("assistant"):
 
@@ -117,7 +153,10 @@ def search_interface():
 
         with st.expander("📄 Retrieved Sources"):
 
-            for i, doc in enumerate(docs, start=1):
+            for i, doc in enumerate(
+                retrieved_docs,
+                start=1
+            ):
 
                 st.write(f"### Source {i}")
 
