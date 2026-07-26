@@ -82,3 +82,49 @@ class LLMService:
         )
 
         return self.generate_response(prompt)
+    
+        # --------------------------------------------------
+    # Stream Response
+    # --------------------------------------------------
+
+    def stream_response(
+        self,
+        prompt: str,
+        temperature: float = 0.2,
+    ):
+        """
+        Stream a response from Gemini.
+
+        Parameters
+        ----------
+        prompt : str
+            Prompt sent to Gemini.
+
+        temperature : float
+            Controls randomness.
+
+        Yields
+        ------
+        str
+            Text chunks from Gemini.
+        """
+
+        try:
+
+            response = self.client.models.generate_content_stream(
+                model=self.model,
+                contents=prompt,
+                config={
+                    "temperature": temperature
+                }
+            )
+
+            for chunk in response:
+
+                if hasattr(chunk, "text") and chunk.text:
+
+                    yield chunk.text
+
+        except Exception as e:
+
+            yield f"Error: {e}"

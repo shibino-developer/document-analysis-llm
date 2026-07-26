@@ -8,10 +8,12 @@ Responsibilities
 - Display chat interface
 - Retrieve relevant document chunks
 - Build RAG prompt
-- Pass previous conversation to Gemini
+- Stream Gemini response
+- Maintain conversation history
 - Display retrieved sources
 """
 
+import time
 import streamlit as st
 
 from utils.prompt import PromptBuilder
@@ -24,7 +26,7 @@ def search_interface():
     """
 
     # ---------------------------------------------------------
-    # Check document status
+    # Check if document has been processed
     # ---------------------------------------------------------
 
     if not st.session_state.get("processed", False):
@@ -41,7 +43,7 @@ def search_interface():
         st.session_state.messages = []
 
     # ---------------------------------------------------------
-    # Display Previous Messages
+    # Display Previous Conversation
     # ---------------------------------------------------------
 
     for message in st.session_state.messages:
@@ -55,16 +57,51 @@ def search_interface():
                 and "sources" in message
             ):
 
-                with st.expander("📄 Retrieved Sources"):
+                with st.expander(
+                    "📄 Retrieved Sources",
+                    expanded=False
+                ):
 
-                    for i, doc in enumerate(
+                    for index, doc in enumerate(
                         message["sources"],
                         start=1
                     ):
 
-                        st.write(f"### Source {i}")
-                        st.json(doc.metadata)
-                        st.write(doc.page_content)
+                        metadata = doc.metadata
+
+                        filename = metadata.get(
+                            "source",
+                            "Unknown"
+                        )
+
+                        page = metadata.get(
+                            "page",
+                            "-"
+                        )
+
+                        with st.container():
+
+                            st.markdown(
+                                f"### 📄 {filename} • Page {page}"
+                            )
+
+                            col1, col2 = st.columns(2)
+
+                            with col1:
+                                st.write("**File**")
+                                st.write(filename)
+
+                            with col2:
+                                st.write("**Page**")
+                                st.write(page)
+
+                            st.caption(
+                                f"Chunk Size: {len(doc.page_content)} characters"
+                            )
+
+                            st.write(doc.page_content)
+
+                            st.divider()
 
     # ---------------------------------------------------------
     # Chat Input
@@ -92,17 +129,22 @@ def search_interface():
     )
 
     # ---------------------------------------------------------
-    # Build Conversation Memory
+    # Conversation Memory
     # ---------------------------------------------------------
 
-    # Keep only the last 6 messages
     chat_history = st.session_state.messages[-6:]
 
     # ---------------------------------------------------------
-    # Retrieve Relevant Chunks
+    # Start Timer
     # ---------------------------------------------------------
 
-    with st.spinner("Searching document..."):
+    start_time = time.time()
+
+    # ---------------------------------------------------------
+    # Retrieve Documents
+    # ---------------------------------------------------------
+
+    with st.spinner("🔎 Searching document..."):
 
         vector_store = st.session_state.vector_store
 
@@ -110,10 +152,6 @@ def search_interface():
             query=query,
             k=3
         )
-
-        # -----------------------------------------------------
-        # Build Prompt
-        # -----------------------------------------------------
 
         prompt_builder = PromptBuilder()
 
@@ -123,16 +161,74 @@ def search_interface():
             chat_history=chat_history
         )
 
-        # -----------------------------------------------------
-        # Generate Answer
-        # -----------------------------------------------------
+    # ---------------------------------------------------------
+    # Generate Streaming Response
+    # ---------------------------------------------------------
 
-        llm = LLMService()
+    llm = LLMService()
 
-        answer = llm.generate_response(prompt)
+    with st.chat_message("assistant"):
+
+        answer = st.write_stream(
+            llm.stream_response(prompt)
+        )
+
+        elapsed_time = time.time() - start_time
+
+        st.caption(
+            f"⏱ Response generated in {elapsed_time:.2f} seconds"
+        )
+
+        st.caption(
+            f"📄 Retrieved {len(retrieved_docs)} relevant document chunk(s)"
+        )
+
+        with st.expander(
+            "📄 Retrieved Sources",
+            expanded=False
+        ):
+
+            for index, doc in enumerate(
+                retrieved_docs,
+                start=1
+            ):
+
+                metadata = doc.metadata
+
+                filename = metadata.get(
+                    "source",
+                    "Unknown"
+                )
+
+                page = metadata.get(
+                    "page",
+                    "-"
+                )
+
+                st.markdown(
+                    f"## 📄 Source {index}"
+                )
+
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    st.write("**File**")
+                    st.write(filename)
+
+                with col2:
+                    st.write("**Page**")
+                    st.write(page)
+
+                st.caption(
+                    f"Chunk Size: {len(doc.page_content)} characters"
+                )
+
+                st.write(doc.page_content)
+
+                st.divider()
 
     # ---------------------------------------------------------
-    # Save Assistant Message
+    # Save Assistant Response
     # ---------------------------------------------------------
 
     st.session_state.messages.append(
@@ -142,24 +238,3 @@ def search_interface():
             "sources": retrieved_docs
         }
     )
-
-    # ---------------------------------------------------------
-    # Display Assistant Message
-    # ---------------------------------------------------------
-
-    with st.chat_message("assistant"):
-
-        st.markdown(answer)
-
-        with st.expander("📄 Retrieved Sources"):
-
-            for i, doc in enumerate(
-                retrieved_docs,
-                start=1
-            ):
-
-                st.write(f"### Source {i}")
-
-                st.json(doc.metadata)
-
-                st.write(doc.page_content)
