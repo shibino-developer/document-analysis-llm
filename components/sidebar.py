@@ -12,6 +12,7 @@ Responsibilities
 """
 
 import streamlit as st
+from utils.export import ChatExporter
 
 
 def render_sidebar():
@@ -129,6 +130,40 @@ def render_sidebar():
 
         st.markdown("---")
 
+
+        # ---------------------------------------------------
+# Download Chat
+# ---------------------------------------------------
+
+        if st.session_state.get("messages"):
+
+            st.subheader("Download Chat")
+
+            txt_data = ChatExporter.export_txt(
+                st.session_state.messages
+            )
+
+            md_data = ChatExporter.export_markdown(
+                st.session_state.messages
+            )
+
+            st.download_button(
+                label="📄 Download TXT",
+                data=txt_data,
+                file_name="chat.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
+
+            st.download_button(
+                label="📝 Download Markdown",
+                data=md_data,
+                file_name="chat.md",
+                mime="text/markdown",
+                use_container_width=True
+            )
+
+            st.markdown("---")
         # ---------------------------------------------------
         # About
         # ---------------------------------------------------
