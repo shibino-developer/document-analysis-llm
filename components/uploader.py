@@ -70,7 +70,6 @@ def upload_document():
     st.session_state.filename = uploaded_file.name
     st.session_state.processed = True
 
-    # Clear previous chat when a new document is uploaded
+# New document → new conversation
     st.session_state.messages = []
-
     st.success("✅ Document processed successfully.")

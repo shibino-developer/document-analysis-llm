@@ -92,6 +92,24 @@ def render_sidebar():
         st.markdown("---")
 
         # ---------------------------------------------------
+# Clear Chat
+# ---------------------------------------------------
+
+        if st.session_state.get("processed", False):
+
+            if st.button(
+                "💬 Clear Chat",
+                use_container_width=True
+            ):
+
+                st.session_state.messages = []
+
+                st.success("Chat cleared.")
+
+                st.rerun()
+
+        st.markdown("---")
+        # ---------------------------------------------------
         # Clear Session
         # ---------------------------------------------------
 
