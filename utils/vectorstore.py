@@ -14,7 +14,7 @@ Responsibilities
 
 from pathlib import Path
 from typing import List
-
+import os
 import shutil
 
 from langchain_core.documents import Document
@@ -68,9 +68,9 @@ class VectorStoreService:
     # Save
     # ---------------------------------------------------------
 
-    def save_vector_store(self):
+    def save_vector_store(self, folder_path: str = "database/faiss_index",):
         """
-        Save FAISS index to disk.
+        Save the FAISS vector store to disk.
         """
 
         if self.vectorstore is None:
@@ -78,38 +78,25 @@ class VectorStoreService:
                 "Vector store has not been created."
             )
 
-        self.index_path.mkdir(
-            parents=True,
-            exist_ok=True
-        )
+        os.makedirs(folder_path, exist_ok=True)
+        self.vectorstore.save_local(folder_path)
 
-        self.vectorstore.save_local(
-            str(self.index_path)
-        )
-
-        print(
-            f"Vector store saved to {self.index_path}"
-        )
 
     # ---------------------------------------------------------
     # Load
     # ---------------------------------------------------------
 
-    def load_vector_store(self) -> FAISS:
+    def load_vector_store(self, folder_path: str = "database/faiss_index",):
         """
         Load existing FAISS vector store.
         """
 
-        if not self.index_path.exists():
+        if not os.path.exists(folder_path):
             raise FileNotFoundError(
-                "Vector store not found."
-            )
-
-        self.vectorstore = FAISS.load_local(
-            str(self.index_path),
-            self.embedding_model,
-            allow_dangerous_deserialization=True,
+            "No saved vector store found."
         )
+
+        self.vectorstore = FAISS.load_local(folder_path,self.embedding_model,allow_dangerous_deserialization=True)
 
         return self.vectorstore
 
@@ -163,15 +150,10 @@ class VectorStoreService:
     # Delete
     # ---------------------------------------------------------
 
-    def delete_vector_store(self):
-        """
-        Delete saved FAISS index.
-        """
-
-        if self.index_path.exists():
-            shutil.rmtree(self.index_path)
-
-            print("Vector store deleted.")
+    def delete_vector_store(self,folder_path: str = "database/faiss_index",):
+       """Delete the saved vector store."""
+       if os.path.exists(folder_path):
+           shutil.rmtree(folder_path)
 
     # ---------------------------------------------------------
     # Information
@@ -192,4 +174,9 @@ class VectorStoreService:
         Check whether saved index exists.
         """
 
-        return self.index_path.exists()
+        return (self.index_path.exists() and any(self.index_path.iterdir()))
+
+    def vector_store_exists(self,folder_path: str = "database/faiss_index",):
+        """Check whether a saved vector store exists."""
+
+        return (os.path.exists(folder_path) and len(os.listdir(folder_path)) > 0)

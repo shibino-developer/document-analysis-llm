@@ -85,6 +85,7 @@ def upload_document():
 
         vector_store = VectorStoreService()
         vector_store.create_vector_store(chunks)
+        vector_store.save_vector_store()
 
 # ---------------------------------------------------------
 # Save Session State
