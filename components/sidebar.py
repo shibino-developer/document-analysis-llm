@@ -51,9 +51,10 @@ def render_sidebar():
 
         if st.session_state.get("processed", False):
 
-            st.write(
-                f"**File:** {st.session_state.get('filename','-')}"
-            )
+            st.write("**Uploaded Files**")
+
+            for file in st.session_state.get("filenames", []):
+                st.write(f"📄 {file}")
 
             st.write(
                 f"**Chunks:** {len(st.session_state.get('chunks', []))}"

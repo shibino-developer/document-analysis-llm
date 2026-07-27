@@ -23,7 +23,7 @@ def show_statistics():
     documents = st.session_state.get("documents", [])
     vector_store = st.session_state.get("vector_store", None)
 
-    filename = st.session_state.get("filename", "Unknown")
+    filenames = st.session_state.get("filenames", [])
 
     # -----------------------------
     # Extract Metadata
@@ -59,8 +59,8 @@ def show_statistics():
 
     with col1:
         st.metric(
-            label="📄 File",
-            value=filename
+            label="📄 Files",
+            value=len(filenames)
         )
 
     with col2:
@@ -91,16 +91,10 @@ def show_statistics():
 
     with info_col1:
 
-        st.write("**File Name**")
-        st.write(filename)
+        st.write("**Uploaded Files**")
+
+        for file in filenames:
+            st.write(f"📄 {file}")
 
         st.write("**File Type**")
         st.write(file_type)
-
-    with info_col2:
-
-        st.write("**Documents Loaded**")
-        st.write(len(documents))
-
-        st.write("**Vector Store Status**")
-        st.success("Ready")

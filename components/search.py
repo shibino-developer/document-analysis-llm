@@ -148,10 +148,15 @@ def search_interface():
 
         vector_store = st.session_state.vector_store
 
-        retrieved_docs = vector_store.similarity_search(
+        results = vector_store.similarity_search_with_score(
             query=query,
             k=3
         )
+
+        retrieved_docs = [
+            doc
+            for doc, score in results
+        ]
 
         prompt_builder = PromptBuilder()
 
@@ -188,13 +193,42 @@ def search_interface():
             expanded=False
         ):
 
-            for index, doc in enumerate(
-                retrieved_docs,
-                start=1
-            ):
+            for index, (doc, score) in enumerate(
+    results,
+    start=1
+):
+
+    # ---------------------------------------------------------
+    # FAISS Distance & Relevance
+    # ---------------------------------------------------------
+
+                score = float(score)
+
+                if score < 0.30:
+                    relevance = "🟢 High"
+                    color = "green"
+                elif score < 0.60:
+                    relevance = "🟡 Medium"
+                    color = "orange"
+                else:
+                    relevance = "🔴 Low"
+                    color = "red"
+
+                st.markdown(
+                    f"**Relevance:** :{color}[{relevance}]"
+                )
+
+                st.caption(
+                    f"FAISS Distance: {score:.4f}"
+                )
+
+    # ---------------------------------------------------------
+    # Metadata
+    # ---------------------------------------------------------
 
                 metadata = doc.metadata
 
+    
                 filename = metadata.get(
                     "source",
                     "Unknown"

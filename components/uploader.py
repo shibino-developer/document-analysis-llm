@@ -16,7 +16,7 @@ def initialize_session():
 
     defaults = {
         "processed": False,
-        "filename": "",
+        "filenames": [],
         "documents": [],
         "chunks": [],
         "vector_store": None,
@@ -35,41 +35,70 @@ def upload_document():
 
     st.header("📂 Upload Document")
 
-    uploaded_file = st.file_uploader(
-        "Choose a PDF, DOCX or TXT file",
-        type=["pdf", "docx", "txt"]
+    uploaded_files = st.file_uploader(
+        "Choose a PDF, DOCX or TXT files",
+        type=["pdf", "docx", "txt"], accept_multiple_files=True
     )
 
-    if uploaded_file is None:
+    if not uploaded_files:
         return
 
-    # Reprocess only if a different file is uploaded
+   # ---------------------------------------------------------
+# Reprocess only if a different set of files is uploaded
+# ---------------------------------------------------------
+
+    current_files = sorted(
+        [file.name for file in uploaded_files]
+    )
+
+    previous_files = sorted(
+        st.session_state.get("filenames", [])
+    )
+
     if (
         st.session_state.processed
-        and uploaded_file.name == st.session_state.filename
+        and current_files == previous_files
     ):
         return
 
-    with st.spinner("Processing document..."):
+# ---------------------------------------------------------
+# Process Documents
+# ---------------------------------------------------------
+
+    with st.spinner("Processing documents..."):
 
         loader = DocumentLoader()
-        documents = loader.load(uploaded_file)
+
+        all_documents = []
+
+        for uploaded_file in uploaded_files:
+
+            documents = loader.load(uploaded_file)
+
+            all_documents.extend(documents)
 
         cleaner = TextCleaner()
-        documents = cleaner.clean(documents)
+        all_documents = cleaner.clean(all_documents)
 
         splitter = DocumentSplitter()
-        chunks = splitter.split(documents)
+        chunks = splitter.split(all_documents)
 
         vector_store = VectorStoreService()
         vector_store.create_vector_store(chunks)
 
-    st.session_state.documents = documents
+# ---------------------------------------------------------
+# Save Session State
+# ---------------------------------------------------------
+
+    st.session_state.documents = all_documents
     st.session_state.chunks = chunks
     st.session_state.vector_store = vector_store
-    st.session_state.filename = uploaded_file.name
+    st.session_state.filenames = current_files
     st.session_state.processed = True
 
-# New document → new conversation
+# New document collection → new conversation
     st.session_state.messages = []
-    st.success("✅ Document processed successfully.")
+
+    st.success(
+        f"✅ {len(uploaded_files)} document(s) processed successfully."
+    )
