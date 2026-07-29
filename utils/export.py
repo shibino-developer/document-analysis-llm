@@ -1,66 +1,50 @@
 """
 export.py
 
-Export chat conversations.
+Knowledge Base Export Service
 
 Responsibilities
 ----------------
-- Export chat as TXT
-- Export chat as Markdown
+- Export FAISS index
+- Export metadata
+- Create ZIP archive
 """
 
-from typing import List
+from pathlib import Path
+import zipfile
 
 
-class ChatExporter:
-    """
-    Export chat history.
-    """
+class ExportService:
 
-    @staticmethod
-    def export_txt(messages: List[dict]) -> str:
+    DATABASE_FOLDER = Path("database")
+
+    EXPORT_NAME = "knowledge_base.zip"
+
+    def export(self) -> Path:
         """
-        Export conversation as plain text.
-        """
-
-        lines = []
-
-        lines.append("Document Analysis using LLMs")
-        lines.append("=" * 50)
-        lines.append("")
-
-        for message in messages:
-
-            role = message["role"].capitalize()
-
-            lines.append(f"{role}:")
-            lines.append(message["content"])
-            lines.append("")
-            lines.append("-" * 50)
-            lines.append("")
-
-        return "\n".join(lines)
-
-    @staticmethod
-    def export_markdown(messages: List[dict]) -> str:
-        """
-        Export conversation as Markdown.
+        Export the knowledge base as a ZIP archive.
         """
 
-        lines = []
+        export_path = self.DATABASE_FOLDER / self.EXPORT_NAME
 
-        lines.append("# Document Analysis using LLMs")
-        lines.append("")
-        lines.append("## Chat Conversation")
-        lines.append("")
+        with zipfile.ZipFile(
+            export_path,
+            "w",
+            zipfile.ZIP_DEFLATED
+        ) as zip_file:
 
-        for message in messages:
+            for file in self.DATABASE_FOLDER.rglob("*"):
 
-            role = message["role"].capitalize()
+                if (
+                    file.is_file()
+                    and file.name != self.EXPORT_NAME
+                ):
 
-            lines.append(f"### {role}")
-            lines.append("")
-            lines.append(message["content"])
-            lines.append("")
+                    zip_file.write(
+                        file,
+                        arcname=file.relative_to(
+                            self.DATABASE_FOLDER
+                        )
+                    )
 
-        return "\n".join(lines)
+        return export_path

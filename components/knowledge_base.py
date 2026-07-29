@@ -17,7 +17,7 @@ import streamlit as st
 
 from utils.vectorstore import VectorStoreService
 from utils.metadata import MetadataManager
-
+from utils.export import ExportService
 
 def format_size(size: int) -> str:
     """
@@ -198,7 +198,33 @@ def render_knowledge_base():
         "Total",
         format_size(total_size)
     )
+   # ---------------------------------------------------------
+# Export Knowledge Base
+# ---------------------------------------------------------
 
+    st.divider()
+
+    st.subheader("📦 Export Knowledge Base")
+
+    st.write(
+        "Download the complete knowledge base "
+        "including the FAISS index and metadata."
+    )
+
+    exporter = ExportService()
+
+    # Always prepare the latest ZIP
+    export_path = exporter.export()
+
+    with open(export_path, "rb") as file:
+
+        st.download_button(
+            label="⬇ Download Knowledge Base",
+            data=file,
+            file_name="knowledge_base.zip",
+            mime="application/zip",
+            use_container_width=True
+        )
     # ---------------------------------------------------------
     # Delete Knowledge Base
     # ---------------------------------------------------------
