@@ -10,17 +10,19 @@ from utils.loader import DocumentLoader
 from utils.cleaner import TextCleaner
 from utils.splitter import DocumentSplitter
 from utils.vectorstore import VectorStoreService
+from utils.metadata import MetadataManager
+from datetime import datetime
 
 
 def initialize_session():
 
     defaults = {
+        "vector_store": None,
+        "chunks": [],
+        "documents": [],
         "processed": False,
         "filenames": [],
-        "documents": [],
-        "chunks": [],
-        "vector_store": None,
-        "messages": [],
+        "metadata": {},
     }
 
     for key, value in defaults.items():
@@ -87,6 +89,27 @@ def upload_document():
         vector_store.create_vector_store(chunks)
         vector_store.save_vector_store()
 
+        metadata = MetadataManager()
+
+        metadata_data = {
+            "filenames": current_files,
+            "file_types": [
+                file.name.split(".")[-1].upper()
+                for file in uploaded_files
+        ],
+            "documents": len(all_documents),
+            "chunks": len(chunks),
+            "vectors": vector_store.vector_count(),
+            "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+            "llm": "Gemini Flash",
+            "uploaded_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+
+
+    metadata.save(metadata_data)
+
+    st.session_state.metadata = metadata_data
 # ---------------------------------------------------------
 # Save Session State
 # ---------------------------------------------------------

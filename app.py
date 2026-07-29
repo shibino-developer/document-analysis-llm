@@ -10,6 +10,8 @@ from components.sidebar import render_sidebar
 from components.uploader import upload_document
 from components.stats import show_statistics
 from components.search import search_interface
+from utils.database import load_saved_database
+from components.knowledge_base import render_knowledge_base
 
 st.set_page_config(
     page_title="Document Analysis using LLMs",
@@ -19,17 +21,16 @@ st.set_page_config(
 
 render_sidebar()
 
-st.title("📄 Document Analysis using LLMs")
+load_saved_database()
 
-st.write(
-    """
-Upload a PDF, DOCX or TXT document and ask questions about it using
-Retrieval-Augmented Generation (RAG).
-"""
-)
+st.title("📄 Document Analysis using LLMs")
 
 upload_document()
 
 show_statistics()
+render_knowledge_base()
 
 search_interface()
+
+st.write(st.session_state)
+st.write(st.session_state.metadata)

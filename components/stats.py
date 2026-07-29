@@ -17,84 +17,121 @@ def show_statistics():
 
     st.divider()
 
-    st.header("📊 Document Statistics")
+    st.header("📊 Knowledge Base Statistics")
 
-    chunks = st.session_state.get("chunks", [])
-    documents = st.session_state.get("documents", [])
-    vector_store = st.session_state.get("vector_store", None)
+    metadata = st.session_state.get("metadata", {})
 
-    filenames = st.session_state.get("filenames", [])
+    # -------------------------------------------------
+    # Metadata
+    # -------------------------------------------------
 
-    # -----------------------------
-    # Extract Metadata
-    # -----------------------------
+    filenames = metadata.get(
+        "filenames",
+        st.session_state.get("filenames", [])
+    )
 
-    if documents:
+    file_types = metadata.get(
+        "file_types",
+        []
+    )
 
-        metadata = documents[0].metadata
+    documents = metadata.get(
+        "documents",
+        len(st.session_state.get("documents", []))
+    )
 
-        file_type = metadata.get("file_type", "Unknown").upper()
+    chunks = metadata.get(
+        "chunks",
+        len(st.session_state.get("chunks", []))
+    )
 
-        if file_type == "PDF":
-            pages = metadata.get("total_pages", len(documents))
-        else:
-            pages = len(documents)
-
-    else:
-
-        file_type = "-"
-        pages = 0
-
-    vectors = (
-        vector_store.vector_count()
-        if vector_store
+    vectors = metadata.get(
+        "vectors",
+        st.session_state.vector_store.vector_count()
+        if st.session_state.get("vector_store")
         else 0
     )
 
-    # -----------------------------
+    uploaded_at = metadata.get(
+        "uploaded_at",
+        "-"
+    )
+
+    embedding_model = metadata.get(
+        "embedding_model",
+        "-"
+    )
+
+    llm = metadata.get(
+        "llm",
+        "-"
+    )
+
+    # -------------------------------------------------
     # Metrics
-    # -----------------------------
+    # -------------------------------------------------
 
     col1, col2, col3, col4 = st.columns(4)
 
-    with col1:
-        st.metric(
-            label="📄 Files",
-            value=len(filenames)
-        )
+    col1.metric(
+        "📂 Files",
+        len(filenames)
+    )
 
-    with col2:
-        st.metric(
-            label="📑 Pages",
-            value=pages
-        )
+    col2.metric(
+        "📑 Documents",
+        documents
+    )
 
-    with col3:
-        st.metric(
-            label="✂️ Chunks",
-            value=len(chunks)
-        )
+    col3.metric(
+        "✂️ Chunks",
+        chunks
+    )
 
-    with col4:
-        st.metric(
-            label="🧠 Vectors",
-            value=vectors
-        )
+    col4.metric(
+        "🧠 Vectors",
+        vectors
+    )
 
-    # -----------------------------
-    # Additional Information
-    # -----------------------------
+    # -------------------------------------------------
+    # Details
+    # -------------------------------------------------
 
-    st.subheader("Document Information")
+    st.subheader("Knowledge Base Information")
 
-    info_col1, info_col2 = st.columns(2)
+    left, right = st.columns(2)
 
-    with info_col1:
+    with left:
 
-        st.write("**Uploaded Files**")
+        st.write("**Files**")
 
-        for file in filenames:
-            st.write(f"📄 {file}")
+        if filenames:
+            for file in filenames:
+                st.write(f"• {file}")
+        else:
+            st.write("-")
 
-        st.write("**File Type**")
-        st.write(file_type)
+        st.write("**File Types**")
+
+        if file_types:
+            st.write(", ".join(file_types))
+        else:
+            st.write("-")
+
+        st.write("**Embedding Model**")
+        st.code(embedding_model)
+
+    with right:
+
+        st.write("**LLM**")
+        st.code(llm)
+
+        st.write("**Uploaded At**")
+        st.write(uploaded_at)
+
+        st.write("**Knowledge Base Status**")
+        st.success("Ready")
+
+    st.success(
+        f"Knowledge Base contains {len(filenames)} document(s)."
+    )
