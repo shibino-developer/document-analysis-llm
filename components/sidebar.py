@@ -1,161 +1,144 @@
 """
-knowledge_base.py
+sidebar.py
 
-Knowledge Base Dashboard
-
-Responsibilities
-----------------
-- Display Knowledge Base status
-- Display indexed documents
-- Display metadata
-- Display statistics
+Sidebar component for the Document Analysis using LLMs project.
 """
 
 import streamlit as st
 
 
-def render_knowledge_base():
+def render_sidebar():
     """
-    Render the Knowledge Base dashboard.
+    Render the application sidebar.
     """
 
-    if not st.session_state.get("processed", False):
-        return
+    with st.sidebar:
 
-    metadata = st.session_state.get("metadata", {})
+        st.title("📄 Document Analysis")
 
-    st.divider()
-    st.header("🗄 Knowledge Base Manager")
+        st.markdown("---")
 
-    # ---------------------------------------------------------
-    # Metadata
-    # ---------------------------------------------------------
+        # ---------------------------------------------------
+        # Project Status
+        # ---------------------------------------------------
 
-    filenames = metadata.get(
-        "filenames",
-        st.session_state.get("filenames", [])
-    )
+        st.subheader("Project Status")
 
-    file_types = metadata.get(
-        "file_types",
-        []
-    )
+        st.success("✅ Document Loader")
+        st.success("✅ Text Cleaner")
+        st.success("✅ Text Chunking")
+        st.success("✅ Embeddings")
+        st.success("✅ FAISS Vector Store")
+        st.success("✅ Semantic Search")
+        st.success("✅ Gemini LLM")
+        st.success("✅ RAG Pipeline")
 
-    documents = metadata.get(
-        "documents",
-        len(st.session_state.get("documents", []))
-    )
+        st.markdown("---")
 
-    chunks = metadata.get(
-        "chunks",
-        len(st.session_state.get("chunks", []))
-    )
+        # ---------------------------------------------------
+        # Knowledge Base
+        # ---------------------------------------------------
 
-    vector_store = st.session_state.get("vector_store")
+        st.subheader("Knowledge Base")
 
-    vectors = metadata.get(
-        "vectors",
-        vector_store.vector_count() if vector_store else 0
-    )
+        metadata = st.session_state.get("metadata", {})
 
-    uploaded_at = metadata.get(
-        "uploaded_at",
-        "-"
-    )
+        if st.session_state.get("processed", False):
 
-    embedding_model = metadata.get(
-        "embedding_model",
-        "-"
-    )
-
-    llm = metadata.get(
-        "llm",
-        "-"
-    )
-
-    # ---------------------------------------------------------
-    # Status
-    # ---------------------------------------------------------
-
-    st.success("✅ Knowledge Base Ready")
-
-    # ---------------------------------------------------------
-    # Statistics
-    # ---------------------------------------------------------
-
-    st.subheader("Statistics")
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.metric(
-            label="Documents",
-            value=documents
-        )
-
-    with col2:
-        st.metric(
-            label="Chunks",
-            value=chunks
-        )
-
-    with col3:
-        st.metric(
-            label="Vectors",
-            value=vectors
-        )
-
-    # ---------------------------------------------------------
-    # Indexed Documents
-    # ---------------------------------------------------------
-
-    st.subheader("📄 Indexed Documents")
-
-    if filenames:
-
-        for index, filename in enumerate(filenames):
-
-            if index < len(file_types):
-                file_type = file_types[index]
-            else:
-                file_type = "-"
-
-            st.write(
-                f"**{index + 1}. {filename}** ({file_type})"
+            filenames = metadata.get(
+                "filenames",
+                st.session_state.get("filenames", [])
             )
 
-    else:
+            chunks = metadata.get(
+                "chunks",
+                len(st.session_state.get("chunks", []))
+            )
 
-        st.info("No indexed documents found.")
+            vectors = metadata.get(
+                "vectors",
+                st.session_state.vector_store.vector_count()
+                if st.session_state.get("vector_store")
+                else 0
+            )
 
-    # ---------------------------------------------------------
-    # Metadata
-    # ---------------------------------------------------------
+            st.write(f"**Documents:** {len(filenames)}")
 
-    st.subheader("Metadata")
+            st.write("**Files:**")
 
-    left, right = st.columns(2)
+            if filenames:
+                for file in filenames:
+                    st.write(f"• {file}")
+            else:
+                st.write("-")
 
-    with left:
+            st.write(f"**Chunks:** {chunks}")
+            st.write(f"**Vectors:** {vectors}")
 
-        st.write("**Embedding Model**")
+        else:
+
+            st.info("No knowledge base loaded.")
+
+        st.markdown("---")
+
+        # ---------------------------------------------------
+        # Models
+        # ---------------------------------------------------
+
+        st.subheader("Models")
+
+        st.write("Embedding Model")
 
         st.code(
-            embedding_model,
-            language="text"
+            "sentence-transformers/all-MiniLM-L6-v2"
         )
 
-        st.write("**LLM**")
+        st.write("LLM")
 
-        st.code(
-            llm,
-            language="text"
+        st.code("Gemini Flash")
+
+        st.markdown("---")
+
+        # ---------------------------------------------------
+        # Clear Session
+        # ---------------------------------------------------
+
+        if st.button(
+            "🗑 Clear Session",
+            use_container_width=True
+        ):
+
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+
+            st.success("Session cleared.")
+
+            st.rerun()
+
+        st.markdown("---")
+
+        # ---------------------------------------------------
+        # About
+        # ---------------------------------------------------
+
+        st.subheader("About")
+
+        st.caption(
+            """
+Document Analysis using LLMs
+
+Version 1.0
+
+Built with
+
+• Streamlit
+
+• LangChain
+
+• FAISS
+
+• HuggingFace Embeddings
+
+• Google Gemini
+"""
         )
-
-    with right:
-
-        st.write("**Uploaded At**")
-        st.write(uploaded_at)
-
-        st.write("**Status**")
-        st.success("Ready")

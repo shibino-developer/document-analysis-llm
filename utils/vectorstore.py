@@ -180,3 +180,23 @@ class VectorStoreService:
         """Check whether a saved vector store exists."""
 
         return (os.path.exists(folder_path) and len(os.listdir(folder_path)) > 0)
+    
+        # ---------------------------------------------------------
+    # Storage Size
+    # ---------------------------------------------------------
+
+    def storage_size(self) -> int:
+        """
+        Return the size of the saved FAISS index in bytes.
+        """
+
+        if not self.index_path.exists():
+            return 0
+
+        total_size = 0
+
+        for file in self.index_path.rglob("*"):
+            if file.is_file():
+                total_size += file.stat().st_size
+
+        return total_size

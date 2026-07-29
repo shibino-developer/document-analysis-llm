@@ -40,3 +40,17 @@ class MetadataManager:
 
     def exists(self):
         return self.path.exists()
+    
+        # ---------------------------------------------------------
+    # File Size
+    # ---------------------------------------------------------
+
+    def file_size(self) -> int:
+        """
+        Return metadata file size in bytes.
+        """
+
+        if not self.path.exists():
+            return 0
+
+        return self.path.stat().st_size

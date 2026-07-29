@@ -12,7 +12,25 @@ Responsibilities
 """
 
 import streamlit as st
+from utils.vectorstore import VectorStoreService
+from utils.metadata import MetadataManager
 
+
+def format_size(size: int) -> str:
+    """
+    Convert bytes into a readable size.
+    """
+
+    units = ["B", "KB", "MB", "GB"]
+
+    value = float(size)
+
+    for unit in units:
+
+        if value < 1024 or unit == units[-1]:
+            return f"{value:.2f} {unit}"
+
+        value /= 1024
 
 def render_knowledge_base():
     """
@@ -71,6 +89,35 @@ def render_knowledge_base():
     llm = metadata.get(
         "llm",
         "-"
+    )
+        # ---------------------------------------------------------
+    # Storage Information
+    # ---------------------------------------------------------
+
+    vector_store_service = VectorStoreService()
+    metadata_manager = MetadataManager()
+
+    faiss_size = vector_store_service.storage_size()
+    metadata_size = metadata_manager.file_size()
+    total_size = faiss_size + metadata_size
+
+    st.subheader("💾 Storage Information")
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric(
+        "FAISS Index",
+        format_size(faiss_size)
+    )
+
+    col2.metric(
+        "Metadata",
+        format_size(metadata_size)
+    )
+
+    col3.metric(
+        "Total Storage",
+        format_size(total_size)
     )
 
     # ---------------------------------------------------------
