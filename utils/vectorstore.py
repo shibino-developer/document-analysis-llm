@@ -63,8 +63,26 @@ class VectorStoreService:
         )
 
         return self.vectorstore
-
     # ---------------------------------------------------------
+    # Add Documents
+    # ---------------------------------------------------------
+
+    def add_documents(
+        self,
+        documents: List[Document]
+    ):
+        """
+        Add new documents to the existing vector store.
+        """
+
+        if self.vectorstore is None:
+            raise ValueError(
+                "Vector store is not loaded."
+            )
+
+        self.vectorstore.add_documents(
+            documents
+            )
     # Save
     # ---------------------------------------------------------
 
