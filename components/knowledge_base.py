@@ -18,6 +18,8 @@ import streamlit as st
 from utils.vectorstore import VectorStoreService
 from utils.metadata import MetadataManager
 from utils.export import ExportService
+from utils.importer import ImportService
+from utils.database import load_saved_database
 
 def format_size(size: int) -> str:
     """
@@ -198,6 +200,46 @@ def render_knowledge_base():
         "Total",
         format_size(total_size)
     )
+    # ---------------------------------------------------------
+# Import Knowledge Base
+# ---------------------------------------------------------
+
+    st.divider()
+
+    st.subheader("📥 Import Knowledge Base")
+
+    st.write(
+    "Restore a previously exported knowledge base."
+    )
+
+    uploaded_zip = st.file_uploader(
+        "Choose knowledge_base.zip",
+        type=["zip"],
+        key="knowledge_base_import"
+    )
+
+    if uploaded_zip is not None:
+
+        importer = ImportService()
+
+        try:
+
+            importer.import_zip(uploaded_zip)
+
+            # Clear current session
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+
+            # Reload imported knowledge base
+            load_saved_database()
+
+            st.success("✅ Knowledge Base imported successfully.")
+
+            st.rerun()
+
+        except Exception as e:
+
+            st.error(f"Import failed: {e}")
    # ---------------------------------------------------------
 # Export Knowledge Base
 # ---------------------------------------------------------
