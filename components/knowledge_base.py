@@ -9,16 +9,19 @@ Responsibilities
 - Display indexed documents
 - Display metadata
 - Display statistics
+- Display storage information
+- Delete knowledge base
 """
 
 import streamlit as st
+
 from utils.vectorstore import VectorStoreService
 from utils.metadata import MetadataManager
 
 
 def format_size(size: int) -> str:
     """
-    Convert bytes into a readable size.
+    Convert bytes into human-readable format.
     """
 
     units = ["B", "KB", "MB", "GB"]
@@ -32,9 +35,10 @@ def format_size(size: int) -> str:
 
         value /= 1024
 
+
 def render_knowledge_base():
     """
-    Render the Knowledge Base dashboard.
+    Render Knowledge Base dashboard.
     """
 
     if not st.session_state.get("processed", False):
@@ -90,35 +94,6 @@ def render_knowledge_base():
         "llm",
         "-"
     )
-        # ---------------------------------------------------------
-    # Storage Information
-    # ---------------------------------------------------------
-
-    vector_store_service = VectorStoreService()
-    metadata_manager = MetadataManager()
-
-    faiss_size = vector_store_service.storage_size()
-    metadata_size = metadata_manager.file_size()
-    total_size = faiss_size + metadata_size
-
-    st.subheader("💾 Storage Information")
-
-    col1, col2, col3 = st.columns(3)
-
-    col1.metric(
-        "FAISS Index",
-        format_size(faiss_size)
-    )
-
-    col2.metric(
-        "Metadata",
-        format_size(metadata_size)
-    )
-
-    col3.metric(
-        "Total Storage",
-        format_size(total_size)
-    )
 
     # ---------------------------------------------------------
     # Status
@@ -134,23 +109,9 @@ def render_knowledge_base():
 
     col1, col2, col3 = st.columns(3)
 
-    with col1:
-        st.metric(
-            label="Documents",
-            value=documents
-        )
-
-    with col2:
-        st.metric(
-            label="Chunks",
-            value=chunks
-        )
-
-    with col3:
-        st.metric(
-            label="Vectors",
-            value=vectors
-        )
+    col1.metric("Documents", documents)
+    col2.metric("Chunks", chunks)
+    col3.metric("Vectors", vectors)
 
     # ---------------------------------------------------------
     # Indexed Documents
@@ -160,20 +121,20 @@ def render_knowledge_base():
 
     if filenames:
 
-        for index, filename in enumerate(filenames):
+        for i, filename in enumerate(filenames):
 
-            if index < len(file_types):
-                file_type = file_types[index]
-            else:
-                file_type = "-"
+            file_type = "-"
+
+            if i < len(file_types):
+                file_type = file_types[i]
 
             st.write(
-                f"**{index + 1}. {filename}** ({file_type})"
+                f"**{i+1}. {filename}** ({file_type})"
             )
 
     else:
 
-        st.info("No indexed documents found.")
+        st.info("No indexed documents.")
 
     # ---------------------------------------------------------
     # Metadata
@@ -206,3 +167,63 @@ def render_knowledge_base():
 
         st.write("**Status**")
         st.success("Ready")
+
+    # ---------------------------------------------------------
+    # Storage Information
+    # ---------------------------------------------------------
+
+    vector_service = VectorStoreService()
+    metadata_manager = MetadataManager()
+
+    faiss_size = vector_service.storage_size()
+    metadata_size = metadata_manager.file_size()
+
+    total_size = faiss_size + metadata_size
+
+    st.subheader("💾 Storage Information")
+
+    c1, c2, c3 = st.columns(3)
+
+    c1.metric(
+        "FAISS Index",
+        format_size(faiss_size)
+    )
+
+    c2.metric(
+        "Metadata",
+        format_size(metadata_size)
+    )
+
+    c3.metric(
+        "Total",
+        format_size(total_size)
+    )
+
+    # ---------------------------------------------------------
+    # Delete Knowledge Base
+    # ---------------------------------------------------------
+
+    st.divider()
+
+    st.subheader("Danger Zone")
+
+    st.warning(
+        "Deleting the Knowledge Base will permanently remove "
+        "the FAISS index, metadata and current chat history."
+    )
+
+    if st.button(
+        "🗑 Delete Knowledge Base",
+        type="primary",
+        use_container_width=True
+    ):
+
+        vector_service.delete_vector_store()
+        metadata_manager.delete()
+
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+
+        st.success("Knowledge Base deleted successfully.")
+
+        st.rerun()
