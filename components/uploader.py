@@ -13,6 +13,7 @@ from utils.cleaner import TextCleaner
 from utils.splitter import DocumentSplitter
 from utils.vectorstore import VectorStoreService
 from utils.metadata import MetadataManager
+from utils.document_storage import DocumentStorage
 
 
 def initialize_session():
@@ -87,13 +88,13 @@ def upload_document():
     with st.spinner("Processing documents..."):
 
         loader = DocumentLoader()
+        storage = DocumentStorage()
 
         all_documents = []
 
         for uploaded_file in new_uploaded_files:
-
+            storage.save(uploaded_file)
             docs = loader.load(uploaded_file)
-
             all_documents.extend(docs)
 
         cleaner = TextCleaner()

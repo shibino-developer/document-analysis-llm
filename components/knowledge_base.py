@@ -20,6 +20,9 @@ from utils.metadata import MetadataManager
 from utils.export import ExportService
 from utils.importer import ImportService
 from utils.database import load_saved_database
+from utils.document_storage import DocumentStorage
+from utils.document_manager import DocumentManager
+from utils.metadata import MetadataManager
 
 def format_size(size: int) -> str:
     """
@@ -121,8 +124,10 @@ def render_knowledge_base():
 
     st.subheader("📄 Indexed Documents")
 
-    if filenames:
+    manager = DocumentManager()
 
+    metadata_manager = MetadataManager()
+    if filenames:
         for i, filename in enumerate(filenames):
 
             file_type = "-"
@@ -130,9 +135,29 @@ def render_knowledge_base():
             if i < len(file_types):
                 file_type = file_types[i]
 
-            st.write(
-                f"**{i+1}. {filename}** ({file_type})"
-            )
+            col1, col2 = st.columns([5, 1])
+
+            with col1:
+
+                st.write(
+                    f"**{filename}** ({file_type})"
+                )
+
+            with col2:
+
+                if st.button(
+                    "🗑",
+                    key=f"delete_{filename}",
+                    help="Delete document",
+                ):
+
+                    manager.delete_document(filename)
+
+                    st.session_state.metadata = (
+                        metadata_manager.load()
+                    )
+
+                    st.rerun()
 
     else:
 
@@ -180,14 +205,22 @@ def render_knowledge_base():
     faiss_size = vector_service.storage_size()
     metadata_size = metadata_manager.file_size()
 
-    total_size = faiss_size + metadata_size
+    storage = DocumentStorage()
+
+    documents_size = storage.storage_size()
+
+    total_size = (
+        faiss_size
+        + metadata_size
+        + documents_size
+    )
 
     st.subheader("💾 Storage Information")
 
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
 
     c1.metric(
-        "FAISS Index",
+        "FAISS",
         format_size(faiss_size)
     )
 
@@ -197,9 +230,14 @@ def render_knowledge_base():
     )
 
     c3.metric(
-        "Total",
-        format_size(total_size)
+        "Documents",
+        format_size(documents_size)
     )
+
+    c4.metric(
+    "Total",
+    format_size(total_size)
+)
     # ---------------------------------------------------------
 # Import Knowledge Base
 # ---------------------------------------------------------

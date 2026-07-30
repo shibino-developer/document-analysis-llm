@@ -16,7 +16,7 @@ from pathlib import Path
 
 class MetadataManager:
 
-    DEFAULT_PATH = "database/metadata.json"
+    DEFAULT_PATH = "database/knowledge_base/metadata.json"
 
     def __init__(self, path: str = DEFAULT_PATH):
         self.path = Path(path)

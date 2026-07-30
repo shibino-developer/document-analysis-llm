@@ -28,7 +28,7 @@ class VectorStoreService:
     Handles FAISS vector database operations.
     """
 
-    DEFAULT_INDEX_PATH = "database/faiss_index"
+    DEFAULT_INDEX_PATH = "database/knowledge_base/faiss_index"
 
     def __init__(
         self,
@@ -86,7 +86,10 @@ class VectorStoreService:
     # Save
     # ---------------------------------------------------------
 
-    def save_vector_store(self, folder_path: str = "database/faiss_index",):
+    def save_vector_store(
+        self,
+        folder_path: str = DEFAULT_INDEX_PATH,
+    ):
         """
         Save the FAISS vector store to disk.
         """
@@ -104,7 +107,10 @@ class VectorStoreService:
     # Load
     # ---------------------------------------------------------
 
-    def load_vector_store(self, folder_path: str = "database/faiss_index",):
+    def load_vector_store(
+        self,
+        folder_path: str = DEFAULT_INDEX_PATH,
+    ):
         """
         Load existing FAISS vector store.
         """
@@ -168,7 +174,10 @@ class VectorStoreService:
     # Delete
     # ---------------------------------------------------------
 
-    def delete_vector_store(self,folder_path: str = "database/faiss_index",):
+    def delete_vector_store(
+        self,
+        folder_path: str = DEFAULT_INDEX_PATH,
+    ):
        """Delete the saved vector store."""
        if os.path.exists(folder_path):
            shutil.rmtree(folder_path)
@@ -194,7 +203,10 @@ class VectorStoreService:
 
         return (self.index_path.exists() and any(self.index_path.iterdir()))
 
-    def vector_store_exists(self,folder_path: str = "database/faiss_index",):
+    def vector_store_exists(
+        self,
+        folder_path: str = DEFAULT_INDEX_PATH,
+    ):
         """Check whether a saved vector store exists."""
 
         return (os.path.exists(folder_path) and len(os.listdir(folder_path)) > 0)

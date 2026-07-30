@@ -76,7 +76,9 @@ class DocumentLoader:
 
                     metadata={
 
-                        "source": uploaded_file.name,
+                        "source": Path(uploaded_file.name).name
+                        if hasattr(uploaded_file, "name")
+                        else Path(uploaded_file).name,
 
                         "file_type": "pdf",
 
@@ -118,7 +120,9 @@ class DocumentLoader:
 
                 metadata={
 
-                    "source": uploaded_file.name,
+                    "source": Path(uploaded_file.name).name
+                    if hasattr(uploaded_file, "name")
+                    else Path(uploaded_file).name,
 
                     "file_type": "docx",
 
@@ -157,3 +161,34 @@ class DocumentLoader:
             )
 
         ]
+
+
+        # ---------------------------------------------------------
+    # Load Saved File
+    # ---------------------------------------------------------
+
+    def load_file(self, file_path: str) -> List[Document]:
+        """
+        Load a document from disk.
+        """
+
+        path = Path(file_path)
+
+        if not path.exists():
+            raise FileNotFoundError(file_path)
+
+        extension = path.suffix.lower()
+
+        if extension not in self.SUPPORTED_EXTENSIONS:
+            raise ValueError(
+                f"Unsupported file type: {extension}"
+            )
+
+        if extension == ".pdf":
+            return self._load_pdf(path)
+
+        if extension == ".docx":
+            return self._load_docx(path)
+
+        if extension == ".txt":
+            return self._load_txt(path)
