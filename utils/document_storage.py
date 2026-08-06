@@ -13,6 +13,7 @@ Responsibilities
 
 from pathlib import Path
 import shutil
+from utils.loader import DocumentLoader
 
 
 class DocumentStorage:
@@ -116,3 +117,66 @@ class DocumentStorage:
                 total += file.stat().st_size
 
         return total
+
+        # ---------------------------------------------------------
+    # Load All Stored Documents
+    # ---------------------------------------------------------
+
+    def load_all_documents(self):
+        """
+        Load every stored document from database/documents.
+        """
+
+        loader = DocumentLoader()
+
+        documents = []
+
+        for file in self.STORAGE_PATH.iterdir():
+
+            if file.is_file():
+
+                with open(file, "rb") as f:
+
+                    class UploadedFileWrapper:
+                        def __init__(self, path, data):
+                            self.name = path.name
+                            self._data = data
+                            self._position = 0
+
+                        def read(self, size=-1):
+
+                            if size == -1:
+                                size = len(self._data) - self._position
+
+                            start = self._position
+                            end = start + size
+
+                            self._position = end
+
+                            return self._data[start:end]
+
+                        def seek(self, offset, whence=0):
+                            if whence == 0:
+                                self._position = offset
+
+                            elif whence == 1:
+                                self._position += offset
+
+                            elif whence == 2:
+                                self._position = len(self._data) + offset
+
+                            return self._position
+
+                        def tell(self):
+                            return self._position
+
+                    uploaded = UploadedFileWrapper(
+                        file,
+                        f.read(),
+                    )
+
+                    documents.extend(
+                        loader.load(uploaded)
+                    )
+
+        return documents

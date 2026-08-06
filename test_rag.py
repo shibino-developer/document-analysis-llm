@@ -1,91 +1,68 @@
-from utils.loader import DocumentLoader
-from utils.cleaner import TextCleaner
-from utils.splitter import DocumentSplitter
-from utils.vectorstore import VectorStoreService
-from utils.llm import LLMService
+"""
+test_rag.py
 
-print("=" * 80)
-print("DOCUMENT ANALYSIS USING LLMs")
-print("=" * 80)
+Test the complete RAG pipeline.
+"""
 
-# --------------------------------------------------------
-# Load
-# --------------------------------------------------------
+from utils.rag import RAGService
 
-loader = DocumentLoader()
 
-with open("AI.pdf", "rb") as file:
-    documents = loader.load(file)
+def main():
 
-print("Document Loaded")
+    # ---------------------------------------------------------
+    # Initialize RAG
+    # ---------------------------------------------------------
 
-# --------------------------------------------------------
-# Clean
-# --------------------------------------------------------
+    rag = RAGService()
 
-cleaner = TextCleaner()
+    # ---------------------------------------------------------
+    # Ask Question
+    # ---------------------------------------------------------
 
-documents = cleaner.clean(documents)
+    question = "Explain Retrieval Augmented Generation."
 
-print("Cleaning Completed")
+    answer, retrieved_chunks = rag.answer(
+        question=question,
+        chat_history=[],
+        top_k=5,
+    )
 
-# --------------------------------------------------------
-# Split
-# --------------------------------------------------------
+    # ---------------------------------------------------------
+    # Display Answer
+    # ---------------------------------------------------------
 
-splitter = DocumentSplitter()
+    print("\n" + "=" * 80)
+    print("QUESTION")
+    print("=" * 80)
+    print(question)
 
-chunks = splitter.split(documents)
+    print("\n" + "=" * 80)
+    print("ANSWER")
+    print("=" * 80)
+    print(answer)
 
-print("Chunks Created:", len(chunks))
+    # ---------------------------------------------------------
+    # Display Retrieved Chunks
+    # ---------------------------------------------------------
 
-# --------------------------------------------------------
-# Vector Store
-# --------------------------------------------------------
+    print("\n" + "=" * 80)
+    print("RETRIEVED CHUNKS")
+    print("=" * 80)
 
-vector_store = VectorStoreService()
+    for i, chunk in enumerate(retrieved_chunks, start=1):
 
-vector_store.create_vector_store(chunks)
+        print(f"\nChunk {i}")
 
-print("Vector Store Ready")
+        print("-" * 80)
 
-# --------------------------------------------------------
-# Question
-# --------------------------------------------------------
+        print("Metadata:")
+        print(chunk.metadata)
 
-question = "What are the applications of Artificial Intelligence?"
+        print("\nContent:")
+        print(chunk.page_content[:500])
 
-print()
-print("Question")
-print(question)
+        print("-" * 80)
 
-# --------------------------------------------------------
-# Retrieve
-# --------------------------------------------------------
 
-results = vector_store.similarity_search(
-    question,
-    k=3
-)
-
-print()
-print("Retrieved Chunks:", len(results))
-
-# --------------------------------------------------------
-# Gemini
-# --------------------------------------------------------
-
-llm = LLMService()
-
-answer = llm.answer_question(
-    results,
-    question
-)
-
-print()
-
-print("=" * 80)
-print("ANSWER")
-print("=" * 80)
-
-print(answer)
+if __name__ == "__main__":
+    main()

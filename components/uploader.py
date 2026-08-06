@@ -14,6 +14,7 @@ from utils.splitter import DocumentSplitter
 from utils.vectorstore import VectorStoreService
 from utils.metadata import MetadataManager
 from utils.document_storage import DocumentStorage
+from utils.retrieval.bm25 import BM25RetrieverService
 
 
 def initialize_session():
@@ -130,7 +131,27 @@ def upload_document():
             )
 
         vector_store.save_vector_store()
+        # ---------------------------------------------------------
+        # Build BM25
+        # ---------------------------------------------------------
 
+        bm25 = BM25RetrieverService()
+
+        stored_documents = storage.load_all_documents()
+
+        stored_documents = cleaner.clean(
+            stored_documents
+        )
+
+        stored_chunks = splitter.split(
+            stored_documents
+        )
+
+        bm25.build(
+            stored_chunks
+        )
+
+        bm25.save()
     # ---------------------------------------------------------
     # Update Metadata
     # ---------------------------------------------------------
