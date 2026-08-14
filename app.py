@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 apply_theme()
-
+st.success("🚀 NEW VERSION IS RUNNING")
 
 # =========================================================
 # KNOWLEDGE BASE PATHS
