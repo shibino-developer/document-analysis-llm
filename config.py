@@ -9,10 +9,6 @@ import os
 
 from dotenv import load_dotenv
 
-# --------------------------------------------------------
-# Load Environment Variables
-# --------------------------------------------------------
-
 load_dotenv()
 
 # --------------------------------------------------------
@@ -21,13 +17,18 @@ load_dotenv()
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-GEMINI_MODEL = "models/gemini-flash-latest"
+GEMINI_MODEL = os.getenv(
+    "GEMINI_MODEL",
+    "models/gemini-flash-latest"
+)
 
 # --------------------------------------------------------
 # Embedding Model
 # --------------------------------------------------------
 
-EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+EMBEDDING_MODEL = (
+    "sentence-transformers/all-MiniLM-L6-v2"
+)
 
 # --------------------------------------------------------
 # Chunking

@@ -20,5 +20,4 @@ rank-bm25
 scikit-learn
 numpy
 pandas
-
 requests

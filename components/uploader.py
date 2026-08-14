@@ -394,15 +394,10 @@ def upload_document():
             all_files
         )
 
-        st.session_state.metadata = (
-            metadata_data
-        )
-
+        st.session_state.metadata = metadata_data
         st.session_state.processed = True
-
-        st.session_state.knowledge_base_loaded = (
-            True
-        )
+        st.session_state.knowledge_base_loaded = True
+        st.session_state.knowledge_base_initialized = True
 
         # -------------------------------------------------
         # Reset conversation
