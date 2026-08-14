@@ -1,80 +1,66 @@
-from utils.loader import DocumentLoader
-from utils.cleaner import TextCleaner
-from utils.splitter import DocumentSplitter
 from utils.vectorstore import VectorStoreService
-
-from utils.retrieval.bm25 import BM25RetrieverService
-from utils.retrieval.hybrid import HybridRetriever
 from utils.retrieval.reranker import CrossEncoderReranker
 
-loader = DocumentLoader()
 
-documents = loader.load_file(
-    "database/documents/AI.pdf"
-)
+def main():
 
-documents = TextCleaner().clean(
-    documents
-)
+    print("=" * 70)
+    print("TESTING CROSS ENCODER")
+    print("=" * 70)
 
-chunks = DocumentSplitter().split(
-    documents
-)
+    vector_store = VectorStoreService()
 
-# BM25
+    vector_store.load_vector_store()
 
-bm25 = BM25RetrieverService()
+    results = vector_store.similarity_search(
+        "What is Machine Learning?",
+        k=5,
+    )
 
-bm25.build(chunks)
-bm25.save()
+    reranker = CrossEncoderReranker()
 
-# FAISS
+    ranked = reranker.rerank_with_scores(
+        query="What is Machine Learning?",
+        documents=results,
+        top_k=5,
+    )
 
-vector_store = VectorStoreService()
+    print()
+    print("=" * 70)
+    print("RANKED RESULTS")
+    print("=" * 70)
 
-vector_store.create_vector_store(
-    chunks
-)
+    for index, (score, document) in enumerate(
+        ranked,
+        start=1,
+    ):
 
-# Hybrid
+        print()
+        print(f"Rank {index}")
+        print("-" * 70)
 
-hybrid = HybridRetriever(
-    vector_store,
-    bm25,
-)
+        print(
+            f"Cross Encoder Score: {float(score):.4f}"
+        )
 
-results = hybrid.search(
-    "What is Artificial Intelligence?",
-    k=10,
-)
+        print(
+            f"Source: "
+            f"{document.metadata.get('source', 'Unknown')}"
+        )
 
-print()
+        print(
+            f"Page: "
+            f"{document.metadata.get('page', '-')}"
+        )
 
-print("Before reranking")
+        print()
 
-print(len(results))
+        print(
+            document.page_content[:300]
+        )
 
-# Cross Encoder
+        print("-" * 70)
 
-reranker = CrossEncoderReranker()
 
-results = reranker.rerank(
-    "What is Artificial Intelligence?",
-    results,
-)
-
-print()
-
-print("After reranking")
-
-print(len(results))
-
-print()
-
-for document in results:
-
-    print(document.metadata)
-
-    print(document.page_content[:250])
-
-    print("-" * 80)
+if __name__ == "__main__":
+    main()

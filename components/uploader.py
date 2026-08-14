@@ -1,7 +1,29 @@
 """
 uploader.py
 
-Handles document upload and processing.
+Handles document upload, processing and knowledge-base updates.
+
+Pipeline
+--------
+Upload
+    ↓
+Document Storage
+    ↓
+Document Loader
+    ↓
+Text Cleaner
+    ↓
+Document Splitter
+    ↓
+FAISS Vector Store
+    ↓
+BM25 Index
+    ↓
+Metadata
+    ↓
+Session State
+    ↓
+RAG Service Refresh
 """
 
 from datetime import datetime
@@ -17,8 +39,14 @@ from utils.document_storage import DocumentStorage
 from utils.retrieval.bm25 import BM25RetrieverService
 
 
+# =========================================================
+# SESSION INITIALIZATION
+# =========================================================
+
 def initialize_session():
-    """Initialize Streamlit session state."""
+    """
+    Initialize Streamlit session state.
+    """
 
     defaults = {
         "vector_store": None,
@@ -28,45 +56,67 @@ def initialize_session():
         "filenames": [],
         "metadata": {},
         "messages": [],
+        "knowledge_base_loaded": False,
     }
 
     for key, value in defaults.items():
+
         if key not in st.session_state:
+
             st.session_state[key] = value
 
 
+# =========================================================
+# UPLOAD DOCUMENTS
+# =========================================================
+
 def upload_document():
-    """Upload and process documents."""
+    """
+    Upload and process documents.
+
+    New documents are added to the existing knowledge base.
+    Duplicate filenames are skipped.
+    """
 
     initialize_session()
 
-    st.header("📂 Upload Document")
+    # =====================================================
+    # UPLOAD SECTION
+    # =====================================================
 
     uploaded_files = st.file_uploader(
         "Choose PDF, DOCX or TXT files",
-        type=["pdf", "docx", "txt"],
+        type=[
+            "pdf",
+            "docx",
+            "txt",
+        ],
         accept_multiple_files=True,
     )
 
     if not uploaded_files:
+
         return
 
-    # ---------------------------------------------------------
-    # Load Existing Metadata
-    # ---------------------------------------------------------
+    # =====================================================
+    # LOAD EXISTING METADATA
+    # =====================================================
 
     metadata_manager = MetadataManager()
 
-    existing_metadata = metadata_manager.load() or {}
+    existing_metadata = (
+        metadata_manager.load()
+        or {}
+    )
 
     existing_files = existing_metadata.get(
         "filenames",
-        []
+        [],
     )
 
-    # ---------------------------------------------------------
-    # Skip Duplicate Files
-    # ---------------------------------------------------------
+    # =====================================================
+    # FIND NEW FILES
+    # =====================================================
 
     new_uploaded_files = [
         file
@@ -74,70 +124,162 @@ def upload_document():
         if file.name not in existing_files
     ]
 
+    # =====================================================
+    # DUPLICATE CHECK
+    # =====================================================
+
     if not new_uploaded_files:
 
         st.warning(
-            "⚠ All selected documents are already indexed."
+            "⚠️ All selected documents are already indexed."
         )
 
         return
 
-    # ---------------------------------------------------------
-    # Process New Documents
-    # ---------------------------------------------------------
+    skipped_count = (
+        len(uploaded_files)
+        - len(new_uploaded_files)
+    )
 
-    with st.spinner("Processing documents..."):
+    # =====================================================
+    # PROCESS DOCUMENTS
+    # =====================================================
+
+    progress = st.progress(
+        0,
+        text="Preparing documents...",
+    )
+
+    try:
+
+        # -------------------------------------------------
+        # Services
+        # -------------------------------------------------
 
         loader = DocumentLoader()
-        storage = DocumentStorage()
-
-        all_documents = []
-
-        for uploaded_file in new_uploaded_files:
-            storage.save(uploaded_file)
-            docs = loader.load(uploaded_file)
-            all_documents.extend(docs)
 
         cleaner = TextCleaner()
 
-        all_documents = cleaner.clean(
-            all_documents
-        )
-
         splitter = DocumentSplitter()
 
-        chunks = splitter.split(
-            all_documents
+        storage = DocumentStorage()
+
+        # -------------------------------------------------
+        # Step 1 — Save + Load
+        # -------------------------------------------------
+
+        progress.progress(
+            15,
+            text="📂 Loading documents...",
+        )
+
+        new_documents = []
+
+        for uploaded_file in new_uploaded_files:
+
+            storage.save(
+                uploaded_file
+            )
+
+            documents = loader.load(
+                uploaded_file
+            )
+
+            new_documents.extend(
+                documents
+            )
+
+        if not new_documents:
+
+            progress.empty()
+
+            st.error(
+                "❌ No document content could be extracted."
+            )
+
+            return
+
+        # -------------------------------------------------
+        # Step 2 — Clean
+        # -------------------------------------------------
+
+        progress.progress(
+            30,
+            text="🧹 Cleaning document text...",
+        )
+
+        new_documents = cleaner.clean(
+            new_documents
+        )
+
+        # -------------------------------------------------
+        # Step 3 — Chunk
+        # -------------------------------------------------
+
+        progress.progress(
+            45,
+            text="✂️ Splitting documents into chunks...",
+        )
+
+        new_chunks = splitter.split(
+            new_documents
+        )
+
+        if not new_chunks:
+
+            progress.empty()
+
+            st.error(
+                "❌ No document chunks were generated."
+            )
+
+            return
+
+        # =================================================
+        # FAISS
+        # =================================================
+
+        progress.progress(
+            60,
+            text="🧠 Updating FAISS vector store...",
         )
 
         vector_store = VectorStoreService()
-
-        # -----------------------------------------------------
-        # Create or Update FAISS
-        # -----------------------------------------------------
 
         if vector_store.vector_store_exists():
 
             vector_store.load_vector_store()
 
             vector_store.add_documents(
-                chunks
+                new_chunks
             )
 
         else:
 
             vector_store.create_vector_store(
-                chunks
+                new_chunks
             )
 
         vector_store.save_vector_store()
-        # ---------------------------------------------------------
-        # Build BM25
-        # ---------------------------------------------------------
+
+        # =================================================
+        # BM25
+        # =================================================
+
+        progress.progress(
+            75,
+            text="🔎 Updating BM25 search index...",
+        )
 
         bm25 = BM25RetrieverService()
 
-        stored_documents = storage.load_all_documents()
+        # -------------------------------------------------
+        # Rebuild BM25 from ALL stored documents
+        # -------------------------------------------------
+
+        stored_documents = (
+            storage.load_all_documents()
+        )
 
         stored_documents = cleaner.clean(
             stored_documents
@@ -152,87 +294,199 @@ def upload_document():
         )
 
         bm25.save()
-    # ---------------------------------------------------------
-    # Update Metadata
-    # ---------------------------------------------------------
 
-    all_files = existing_metadata.get(
-        "filenames",
-        []
-    ).copy()
+        # =================================================
+        # METADATA
+        # =================================================
 
-    all_types = existing_metadata.get(
-        "file_types",
-        []
-    ).copy()
-
-    for file in new_uploaded_files:
-
-        all_files.append(
-            file.name
+        progress.progress(
+            88,
+            text="📊 Updating knowledge-base metadata...",
         )
 
-        all_types.append(
-            file.name.split(".")[-1].upper()
+        all_files = (
+            existing_metadata
+            .get(
+                "filenames",
+                [],
+            )
+            .copy()
         )
 
-    metadata_data = {
-        "filenames": all_files,
-        "file_types": all_types,
-        "documents": len(all_files),
-        "chunks": existing_metadata.get(
-            "chunks",
-            0,
-        ) + len(chunks),
-        "vectors": vector_store.vector_count(),
-        "embedding_model":
-            "sentence-transformers/all-MiniLM-L6-v2",
-        "llm": "Gemini Flash",
-        "uploaded_at": datetime.now().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        ),
-    }
-
-    metadata_manager.save(
-        metadata_data
-    )
-
-    # ---------------------------------------------------------
-    # Update Session State
-    # ---------------------------------------------------------
-
-    st.session_state.documents = all_documents
-    st.session_state.chunks = chunks
-    st.session_state.vector_store = vector_store
-    st.session_state.filenames = metadata_data[
-        "filenames"
-    ]
-    st.session_state.metadata = metadata_data
-    st.session_state.processed = True
-
-    # Reset chat for new knowledge base updates
-
-    st.session_state.messages = []
-
-    # ---------------------------------------------------------
-    # Success Message
-    # ---------------------------------------------------------
-
-    processed = len(new_uploaded_files)
-
-    skipped = (
-        len(uploaded_files)
-        - processed
-    )
-
-    message = (
-        f"✅ {processed} document(s) indexed successfully."
-    )
-
-    if skipped > 0:
-
-        message += (
-            f" ({skipped} duplicate document(s) skipped)"
+        all_types = (
+            existing_metadata
+            .get(
+                "file_types",
+                [],
+            )
+            .copy()
         )
 
-    st.success(message)
+        for uploaded_file in new_uploaded_files:
+
+            all_files.append(
+                uploaded_file.name
+            )
+
+            all_types.append(
+                uploaded_file.name
+                .split(".")[-1]
+                .upper()
+            )
+
+        metadata_data = {
+
+            "filenames": all_files,
+
+            "file_types": all_types,
+
+            "documents": len(
+                all_files
+            ),
+
+            "chunks": len(
+                stored_chunks
+            ),
+
+            "vectors": (
+                vector_store.vector_count()
+            ),
+
+            "embedding_model":
+                "sentence-transformers/"
+                "all-MiniLM-L6-v2",
+
+            "llm":
+                "Gemini Flash",
+
+            "uploaded_at":
+                datetime.now().strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
+        }
+
+        metadata_manager.save(
+            metadata_data
+        )
+
+        # =================================================
+        # SESSION STATE
+        # =================================================
+
+        progress.progress(
+            95,
+            text="💾 Updating application state...",
+        )
+
+        st.session_state.documents = (
+            stored_documents
+        )
+
+        st.session_state.chunks = (
+            stored_chunks
+        )
+
+        st.session_state.vector_store = (
+            vector_store
+        )
+
+        st.session_state.filenames = (
+            all_files
+        )
+
+        st.session_state.metadata = (
+            metadata_data
+        )
+
+        st.session_state.processed = True
+
+        st.session_state.knowledge_base_loaded = (
+            True
+        )
+
+        # -------------------------------------------------
+        # Reset conversation
+        # -------------------------------------------------
+
+        st.session_state.messages = []
+
+        # =================================================
+        # IMPORTANT:
+        # REFRESH CACHED RAG SERVICE
+        # =================================================
+
+        st.cache_resource.clear()
+
+        # =================================================
+        # COMPLETE
+        # =================================================
+
+        progress.progress(
+            100,
+            text="✅ Knowledge base updated!",
+        )
+
+        progress.empty()
+
+        # =================================================
+        # SUCCESS MESSAGE
+        # =================================================
+
+        processed_count = len(
+            new_uploaded_files
+        )
+
+        message = (
+            f"✅ **{processed_count} document(s) "
+            f"indexed successfully.**"
+        )
+
+        if skipped_count > 0:
+
+            message += (
+                f" {skipped_count} duplicate "
+                f"document(s) skipped."
+            )
+
+        st.success(
+            message
+        )
+
+        # -------------------------------------------------
+        # Show statistics
+        # -------------------------------------------------
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+
+            st.metric(
+                "📄 Documents",
+                metadata_data["documents"],
+            )
+
+        with col2:
+
+            st.metric(
+                "✂️ Chunks",
+                metadata_data["chunks"],
+            )
+
+        with col3:
+
+            st.metric(
+                "🧠 Vectors",
+                metadata_data["vectors"],
+            )
+
+    except Exception as e:
+
+        progress.empty()
+
+        st.error(
+            "❌ Failed to process the documents."
+        )
+
+        st.exception(
+            e
+        )

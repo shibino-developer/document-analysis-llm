@@ -63,6 +63,15 @@ def main():
 
         print("-" * 80)
 
+    print("\nCompressed Context\n")
+
+    for chunk in retrieved_chunks:
+
+        print("-" * 60)
+
+        print(chunk.page_content)
+
+        print()
 
 if __name__ == "__main__":
     main()
