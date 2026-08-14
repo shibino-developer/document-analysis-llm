@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 apply_theme()
-st.success("🚀 NEW VERSION IS RUNNING")
+
 
 # =========================================================
 # KNOWLEDGE BASE PATHS
@@ -152,22 +152,12 @@ initialize_knowledge_base()
 # =========================================================
 
 st.markdown(
-    """
-    <div class="app-header">
-
-        <div class="app-title">
-            📄 DocuMind
-        </div>
-
-        <div class="app-subtitle">
-            AI-powered document analysis and knowledge assistant
-        </div>
-
-    </div>
-    """,
-    unsafe_allow_html=True,
+    "# 📄 DocuMind"
 )
 
+st.caption(
+    "AI-powered document analysis and knowledge assistant"
+)
 
 # =========================================================
 # KNOWLEDGE BASE STATUS
